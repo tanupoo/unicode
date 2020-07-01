@@ -89,9 +89,12 @@ class MyHTMLParser(HTMLParser):
                     self._print(f"category: {data}") # e.g. European Scripts
                     self.category = data
                 elif self.state == 2:
-                    self._print(f"name: {data}") # e.g. Shavian
-                    d = self.db.setdefault(self.category, {})
-                    d.update({data: self.attr})
+                    self._print(f"subcategory: {data}") # e.g. Shavian
+                    if "MB)" in data:
+                        pass
+                    else:
+                        d = self.db.setdefault(self.category, {})
+                        d.update({data: self.attr})
                 self.state = 2
                 self.debug_print("=> state", self.state)
 
