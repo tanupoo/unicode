@@ -6,12 +6,6 @@ from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
 from charts import db
 
-"""
-./unicode.py s --newline 1F64b 1f3fb
-./unicode.py s --newline 845B e0100
-./unicode.py s --newline 0066 200D 0066 200D 0074
-"""
-
 normalize_mode_list = ["NFC", "NFKC", "NFD", "NFKD" ]
 
 wdb = {
@@ -23,57 +17,51 @@ wdb = {
 def normalize(text, mode="NFC"):
     return unicodedata.normalize(mode, text)
 
-def find_category(keyword):
-    category = keyword.lower()
+def find_category(category_hint):
+    """find categories by category_hint, which is a whole or a part of a key."""
+    ret = []
+    hint = category_hint.lower()
     for c,x in db.items():
-        if c.lower().find(category) > -1:
-            return c
-    else:
+        if c.lower().find(hint) > -1:
+            ret.append(c)
+    if len(ret) == 0:
         raise ValueError("ERROR: not found any category containing "
-                         f"the keyword '{keyword}'")
+                         f"the string '{keyword}'")
+    return ret
 
-def find_code(whole_key=None, keyword=None, category=None):
+def find_subc(whole_key=None, keyword=None, category=None):
     """
-    either key or keyword must be specified.
-    if category is not None, the value of the category must exists in db.
-    it must be checked before find_code() has been called.
+    find sub categories by an entire key or a keyword (a part of a key).
+    return the list of (subcategory name, the range of code points).
+    either whole_key or keyword, but not both, must be specified.
     XXX need to be cleaned up.
     """
-    if whole_key:
-        if category:
-            for c,x in db.items():
-                if category and category == c:
-                    for k,v in x.items():
-                        if k == whole_key:
-                            return k,v
-        else:
-            # try to search with whole items in db.
-            for c,x in db.items():
-                for k,v in x.items():
-                    if k == whole_key:
-                        return k,v
-            else:
-                raise ValueError("ERROR: not found chars coresponding "
-                                 f"to the key '{whole_key}'")
-    elif keyword:
+    if not (bool(whole_key) ^ bool(keyword)):
+        raise ValueError("ERROR: either key or keyword must be specified.")
+    cp_list = []
+    if keyword is not None:
+        # i.e. whole_key is None
         keyword = keyword.lower()
         if category:
-            for c,x in db.items():
-                if category and category == c:
-                    for k,v in x.items():
-                        if k.lower().find(keyword) > -1:
-                            return k,v
+            for k,v in db[category].items():
+                if k.lower().find(keyword) > -1:
+                    cp_list.append((k,v))
         else:
             # try to search with whole items in db.
             for c,x in db.items():
                 for k,v in x.items():
                     if k.lower().find(keyword) > -1:
-                        return k,v
-            else:
-                raise ValueError("ERROR: not found chars coresponding "
-                                 f"to the key '{keyword}'")
+                        cp_list.append((k,v))
+        #
+        if opt.strict_search == True:
+            if len(cp_list) == 0:
+                raise ValueError("ERROR: not found any chars coresponding "
+                                 f"to the key '{keyword}' "
+                                 f"in category '{category}'")
+        return cp_list
     else:
-        raise ValueError("ERROR: either key or keyword must be specified.")
+        # i.e. whole_key is not None
+        return [db[category][subcategory]]
 
 def print_chars(subc, cr, opt):
     """Need to improve to show charactors using the width of each charactor.
@@ -128,35 +116,43 @@ def count_text(text):
 # functions
 #
 def func_list(opt):
-    if opt.category is None and opt.all:
+    """
+    if neither category nor keyword is specified, just print all categories.
+    """
+    if opt.category_hint is None and opt.show_all_chars:
         raise ValueError("ERROR: the option -c must be defined when you use"
                          "the -a option")
-    category = None
-    if opt.category:
-        category = find_category(opt.category)
+    # print all categories.
+    if opt.category_hint is None and opt.keyword is None:
+        for category,x in db.items():
+            print(f"-c '{category}'")
+        return
+    #
     #
     if opt.keyword: # i.e. -k option, or plus -c option.
-        subc, cp_range = find_code(keyword=opt.keyword, category=category)
-        print_chars(subc, cp_range, opt)
-    elif category: # i.e. only -c option.
-        clist = []
-        for k,v in db[category].items():
-            clist.append((k,v))
-        if opt.all:
-            for x in clist:
-                subc, cp_range = find_code(whole_key=x[0], category=category)
+        cp_list = []
+        if opt.category_hint:
+            for c in find_category(opt.category_hint):
+                cp_list.extend(find_subc(keyword=opt.keyword, category=c))
+        else:
+            cp_list.extend(find_subc(keyword=opt.keyword))
+        for subc,cp_range in cp_list:
+            print_chars(subc, cp_range, opt)
+    elif opt.category_hint: # i.e. only -c option.
+        xcp_list = []
+        for c in find_category(opt.category_hint):
+            for k,v in db[c].items():
+                xcp_list.append((c,k,v))
+        if opt.show_all_chars:
+            for c,subc,cp_range in xcp_list:
                 print_chars(subc, cp_range, opt)
         else:
             # showing the list of sub categories.
-            if opt.verbose:
-                for k,v in db[category].items():
-                    print(f"'{k}': {v}")
-            else:
-                for k in db[category].keys():
-                    print(f"'{k}'")
-    else: # i.e. neither -c nor -k option.
-        for category,x in db.items():
-            print(category)
+            for c,subc,cp_range in xcp_list:
+                if opt.show_cp:
+                    print(f"-c '{c}' -k '{subc}': {db[c][subc]}")
+                else:
+                    print(f"-c '{c}' -k '{subc}'")
 
 def func_read(opt):
     if opt.input_file == "-":
@@ -227,17 +223,19 @@ subp = ap.add_subparsers(dest="parser_name", help="sub-command help")
 sap0 = subp.add_parser("list", aliases=["l"],
                        help="""showing unicode chars. It just shows the list
                        of the categories if you don't specify any arguments.""")
-sap0.add_argument("-c", action="store", dest="category",
-                  help="specify a category.")
-sap0.add_argument("-a", action="store_true", dest="all",
+sap0.add_argument("-c", action="store", dest="category_hint",
+                  help="specify a category or a part of category name.")
+sap0.add_argument("-a", action="store_true", dest="show_all_chars",
                   help="show all chars under the category specified.")
+sap0.add_argument("--show-code-point", action="store_true", dest="show_cp",
+                  help="show the range of code point.")
 sap0.add_argument("-k", action="store", dest="keyword",
                   help="specify a keyword of the unicode sub category name.")
+sap0.add_argument("--strict", action="store_true", dest="strict_search",
+                  help="specify to search strictly.")
 sap0.add_argument("--columns", action="store", dest="nb_columns",
                   type=int, default=20,
                   help="specify the number of the columns to show.")
-sap0.add_argument("-v", action="store_true", dest="verbose",
-                  help="enable verbose mode.")
 sap0.set_defaults(func=func_list)
 # read
 sap1 = subp.add_parser("read", aliases=["r"],
@@ -248,8 +246,6 @@ sap1.add_argument("-c", action="store_true", dest="count_mode",
                   help="enable to count chars")
 sap1.add_argument("-E", action="store_false", dest="eaa_mode",
                   help="disable to handle the input text as EAA.")
-sap1.add_argument("-N", action="store_false", dest="normalize",
-                  help="disable to normalize the input text before processing.")
 sap1.add_argument("--normalize-mode", action="store", dest="normalize_mode",
                   default="NFC",
                   help=f"""specify a mode to normalize. valid mode is:
@@ -267,12 +263,12 @@ sap2.add_argument("-s", action="store_true", dest="series",
                   "from the 1st to the 2nd.")
 sap2.add_argument("-l", action="store_true", dest="virtical_node",
                   help="specify to show the chars in virtical.")
-sap2.add_argument("-v", action="store_true", dest="verbose",
-                  help="enable verbose mode, valid in the virtical mode.")
 sap2.add_argument("-i", action="store_true", dest="integer",
                   help="specify that the code points are in integer.")
-sap2.add_argument("--newline", action="store_true", dest="newline",
-                  help="enable to add a newline at the end of the list.")
+sap2.add_argument("-v", action="store_true", dest="verbose",
+                  help="enable verbose mode, valid in the virtical mode.")
+sap2.add_argument("-N", "--no-newline", action="store_false", dest="newline",
+                  help="disable to add a newline at the end of the list.")
 sap2.set_defaults(func=func_show)
 #
 opt = ap.parse_args()
