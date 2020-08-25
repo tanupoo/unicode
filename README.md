@@ -21,8 +21,9 @@ unicode list -c scripts -k rokee
 unicode list -c 'East Asian Scripts' -k 'CJK Extension C'
 
 unicode read -f sample/nfd.txt
-unicode read -f sample/nfd.txt --normalize-mode="NFD"
-unicode cat sample/nfd.txt | ./unicode.py read -f - 
+unicode read -f sample/nfd.txt -n NFC -o output.txt
+unicode read -f sample/nfd.txt -n NFD -l
+cat sample/nfd.txt | ./unicode.py read
 
 unicode show -N 1F64b 1f3fb
 unicode show 1F64b 1f3fb

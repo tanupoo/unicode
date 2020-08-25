@@ -14,9 +14,6 @@ wdb = {
     False: { "F": None, "H": None, "W": None, "Na": 1, "A": 1, "N": 1 }
 }
 
-def normalize(text, mode="NFC"):
-    return unicodedata.normalize(mode, text)
-
 def find_category(category_hint):
     """find categories by category_hint, which is a whole or a part of a key."""
     ret = []
@@ -95,23 +92,6 @@ def print_chars(subc, cr, opt):
     for i,n in enumerate(range(opt.nb_columns, len(clist), opt.nb_columns)):
         print(f"{i:-4}", " ".join(clist[n:n+opt.nb_columns]))
 
-def count_text_verbose(text):
-    total_size = 0
-    n = 1
-    for i in text:
-        total_size += 1
-        w_area = unicodedata.east_asian_width(i)
-        width = wdb[opt.eaa_mode].get(w_area)
-        print(f"{n:-3} {i:3} {w_area:2} {width:2}")
-        n += 1
-    return total_size
-
-def count_text(text):
-    total_size = 0
-    for i in text:
-        total_size += 1
-    return total_size
-
 #
 # functions
 #
@@ -154,25 +134,48 @@ def func_list(opt):
                 else:
                     print(f"-c '{c}' -k '{subc}'")
 
+def read_char(text, nb_char, ofd):
+    for c in text:
+        nb_char += 1
+        w_area = unicodedata.east_asian_width(c)
+        width = wdb[opt.eaa_mode].get(w_area)
+        name = unicodedata.name(c, None)
+        # this trick is for conversion the \u representation.
+        if c in ["\n", "\r", "\t"]:
+            c = repr(c)
+        ofd.write(bytes(f"{nb_char:-3}: [{c}] {w_area:2} {width:2}: {name}\n"
+                        .encode("utf-8")))
+    return nb_char
+
+def read_normal(text, nb_char, ofd):
+    for c in text:
+        nb_char += 1
+    ofd.write(bytes(text.encode("utf-8")))
+    return nb_char
+
 def func_read(opt):
-    if opt.input_file == "-":
-        fd = sys.stdin
+    if opt.input_file is None:
+        ifd = sys.stdin
     else:
-        fd = open(opt.input_file)
-    if opt.count_mode:
-        if opt.verbose:
-            func = count_text_verbose
-        else:
-            func = count_text
-        nb_char = 0
-        for line in fd:
-            nb_char += func(unicodedata.normalize("NFC", line))
-        print(nb_char)
+        ifd = open(opt.input_file)
+    if opt.output_file is None:
+        ofd = sys.stdout.buffer
     else:
-        for line in fd:
-            # this trick is for conversion the \u representation.
-            line = line.encode("utf-8").decode("utf-8")
-            print(normalize(line, opt.normalize_mode), end="")
+        ofd = open(opt.output_file, "wb")
+    if opt.list_mode:
+        func = read_char
+    else:
+        func = read_normal
+    #
+    nb_char = 0
+    try:
+        for line in ifd:
+            norm_line = unicodedata.normalize(opt.normalize_mode, line)
+            nb_char = func(norm_line, nb_char, ofd)
+    finally:
+        if opt.enable_count:
+            ofd.write(bytes(f"{nb_char}\n".encode("utf-8")))
+        ofd.close()
 
 def func_show(opt):
     base = 16
@@ -241,17 +244,23 @@ sap0.set_defaults(func=func_list)
 sap1 = subp.add_parser("read", aliases=["r"],
                        help="read text and do something.")
 sap1.add_argument("-f", action="store", dest="input_file",
-                  help="specify the filename. '-' can be used as stdin.")
-sap1.add_argument("-c", action="store_true", dest="count_mode",
-                  help="enable to count chars")
+                  help="specify the filename for input."
+                  "default is stdin.")
+sap1.add_argument("-o", action="store", dest="output_file",
+                  help="specify the filename for output."
+                  "default is stdout.")
+sap1.add_argument("-l", action="store_true", dest="list_mode",
+                  help="show the unicode name for each charactor.")
+sap1.add_argument("-c", action="store_true", dest="enable_count",
+                  help="add the number of charactors to the tail.")
 sap1.add_argument("-E", action="store_false", dest="eaa_mode",
                   help="disable to handle the input text as EAA.")
-sap1.add_argument("--normalize-mode", action="store", dest="normalize_mode",
-                  default="NFC",
+sap1.add_argument("-n", "--normalize-mode",
+                  action="store", dest="normalize_mode", default="NFC",
                   help=f"""specify a mode to normalize. valid mode is:
                   {normalize_mode_list}""")
-sap1.add_argument("-v", action="store_true", dest="verbose",
-                  help="enable verbose mode.")
+#sap1.add_argument("-v", action="store_true", dest="verbose",
+#                  help="enable verbose mode.")
 sap1.set_defaults(func=func_read)
 # show
 sap2 = subp.add_parser("show", aliases=["s"],
