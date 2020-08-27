@@ -179,41 +179,46 @@ def func_read(opt):
 
 def func_show(opt):
     base = 16
-    if opt.integer:
+    if opt.arg_integer:
         base = 10
+    cp_list = []    # a list of code points in integer.
+    # make a list of code points.
     if opt.series:
-        if len(opt.code_point) != 2:
-            raise ValueError("ERROR: two code_points must be specified "
+        if opt.arg_name:
+            raise ValueError("ERROR: using both the options of -s and -n "
+                             "in same time is not valid.")
+        if len(opt.arg) != 2:
+            raise ValueError("ERROR: two arg must be specified "
                              "with the option -s.")
-        n_start = int(opt.code_point[0], base)
-        n_end = int(opt.code_point[1], base)
-        #
-        if opt.virtical_node:
-            if opt.verbose:
-                for n in range(n_start, n_end+1):
-                    c = chr(n)
-                    print(f"{n:6X}: {c} : {unicodedata.name(c)}")
-            else:
-                for i in range(n_start, n_end+1):
-                    print(f"{chr(i)}")
-        else:
-            for i in range(n_start, n_end+1):
-                print(f"{chr(i)}", end="")
+        n_start = int(opt.arg[0], base)
+        n_end = int(opt.arg[1], base)
+        cp_list = [n for n in range(n_start, n_end+1)]
+    elif opt.arg_name:
+        if opt.arg_integer:
+            raise ValueError("ERROR: using both the options of -i and -n "
+                             "in same time is not valid.")
+        if len(opt.arg) != 1:
+            raise ValueError("ERROR: only one arg is allowed "
+                             "for the option -n.")
+        for i in range(0xfffff):
+            if opt.arg[0] in unicodedata.name(chr(i), ""):
+                cp_list.append(i)
     else:
-        if opt.virtical_node:
-            if opt.verbose:
-                for i in opt.code_point:
-                    n = int(i,base)
-                    c = chr(n)
-                    print(f"{n:6X}: {c} : {unicodedata.name(c)}")
-            else:
-                for i in opt.code_point:
-                    print(f"{chr(int(i,base))}")
+        cp_list = [int(i, base) for i in opt.arg]
+    # print the list.
+    if opt.list_mode:
+        if opt.with_name:
+            for n in cp_list:
+                c = chr(n)
+                print(f"{n:6X}: {c} : {unicodedata.name(c)}")
         else:
-            for i in opt.code_point:
-                print(f"{chr(int(i,base))}", end="")
-    if opt.newline:
-        print("")
+            for i in cp_list:
+                print(f"{chr(i)}")
+    else:
+        for i in cp_list:
+            print(f"{chr(i)}", end="")
+        if opt.newline:
+            print("")
 
 #
 # main
@@ -264,20 +269,23 @@ sap1.add_argument("-n", "--normalize-mode",
 sap1.set_defaults(func=func_read)
 # show
 sap2 = subp.add_parser("show", aliases=["s"],
-                       help="show a single char specified by a code point")
-sap2.add_argument("code_point", nargs="+",
-                  help="a list of code points.")
+                       help="show a single char specified by the string. "
+                       " default is it must be a code point in hex.")
+sap2.add_argument("arg", nargs="+",
+                  help="a code point in hex.")
 sap2.add_argument("-s", action="store_true", dest="series",
-                  help="indicate to show a list of code points "
-                  "from the 1st to the 2nd.")
-sap2.add_argument("-l", action="store_true", dest="virtical_node",
-                  help="specify to show the chars in virtical.")
-sap2.add_argument("-i", action="store_true", dest="integer",
-                  help="specify that the code points are in integer.")
-sap2.add_argument("-v", action="store_true", dest="verbose",
-                  help="enable verbose mode, valid in the virtical mode.")
+                  help="indicate to show a series of the chars "
+                  "specified by the two code points.")
+sap2.add_argument("-l", action="store_true", dest="list_mode",
+                  help="show the chars in virtical with the unicode name.")
+sap2.add_argument("-i", action="store_true", dest="arg_integer",
+                  help="specify that the arg is a code point in integer.")
+sap2.add_argument("-n", action="store_true", dest="arg_name",
+                  help="specify that the arg is a part of a unicode name.")
+sap2.add_argument("-x", action="store_false", dest="with_name",
+                  help="disable to show a unicode name of the option -l.")
 sap2.add_argument("-N", "--no-newline", action="store_false", dest="newline",
-                  help="disable to add a newline at the end of the list.")
+                  help="disable to add a newline.")
 sap2.set_defaults(func=func_show)
 #
 opt = ap.parse_args()
