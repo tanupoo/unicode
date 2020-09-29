@@ -270,7 +270,7 @@ sap1.set_defaults(func=func_read)
 # show
 sap2 = subp.add_parser("show", aliases=["s"],
                        help="show a single char specified by the string. "
-                       " default is it must be a code point in hex.")
+                       " it must be a code point in hex.")
 sap2.add_argument("arg", nargs="+",
                   help="a code point in hex.")
 sap2.add_argument("-s", action="store_true", dest="series",
