@@ -139,12 +139,12 @@ def read_char(text, nb_char, ofd):
         nb_char += 1
         w_area = unicodedata.east_asian_width(c)
         width = wdb[opt.eaa_mode].get(w_area)
+        ucode = ord(c).to_bytes(2, "big").hex().upper()
         name = unicodedata.name(c, None)
         # this trick is for conversion the \u representation.
         if c in ["\n", "\r", "\t"]:
             c = repr(c)
-        ofd.write(bytes(f"{nb_char:-3}: [{c}] {w_area:2} {width:2}: {name}\n"
-                        .encode("utf-8")))
+        ofd.write(bytes(f"{nb_char:-3}: [{c.ljust(2)}] {w_area:2} {width:2}: {ucode} {name}\n" .encode("utf-8")))
     return nb_char
 
 def read_normal(text, nb_char, ofd):
@@ -164,6 +164,8 @@ def func_read(opt):
         ofd = open(opt.output_file, "wb")
     if opt.list_mode:
         func = read_char
+        print("No.  Chr    EAA SZ CP   Name")
+        print("==== ====== === == ==== ==========")
     else:
         func = read_normal
     #
