@@ -231,8 +231,7 @@ ap = ArgumentParser(
 subp = ap.add_subparsers(dest="parser_name", help="sub-command help")
 # list
 sap0 = subp.add_parser("list", aliases=["l"],
-                       help="""showing unicode chars. It just shows the list
-                       of the categories if you don't specify any arguments.""")
+                       help="shows the list of the categories and charactors.")
 sap0.add_argument("-c", action="store", dest="category_hint",
                   help="specify a category or a part of category name.")
 sap0.add_argument("-a", action="store_true", dest="show_all_chars",
@@ -249,7 +248,7 @@ sap0.add_argument("--columns", action="store", dest="nb_columns",
 sap0.set_defaults(func=func_list)
 # read
 sap1 = subp.add_parser("read", aliases=["r"],
-                       help="read text and do something.")
+                       help="reads and converts text.")
 sap1.add_argument("-f", action="store", dest="input_file",
                   help="specify the filename for input."
                   "default is stdin.")
@@ -271,7 +270,7 @@ sap1.add_argument("-n", "--normalize-mode",
 sap1.set_defaults(func=func_read)
 # show
 sap2 = subp.add_parser("show", aliases=["s"],
-                       help="show a single char specified by the string. "
+                       help="shows a single char specified by the string. "
                        " it must be a code point in hex.")
 sap2.add_argument("arg", nargs="+",
                   help="a code point in hex.")
