@@ -1,7 +1,7 @@
 unicode
 =======
 
-A kichin knife tool for unicode.  The features are below for example.
+A kichen knife tool for unicode.  The features are below for example.
 
 - Reading string, with or without normalizing.
 - Display charactors of unicode specified.
