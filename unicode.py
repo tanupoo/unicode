@@ -130,9 +130,10 @@ def func_list(opt):
             # showing the list of sub categories.
             for c,subc,cp_range in xcp_list:
                 if opt.show_cp:
-                    print(f"-c '{c}' -k '{subc}': {db[c][subc]}")
+                    #print(f"-c '{c}' -k '{subc}': {db[c][subc]}")
+                    print(f"-k '{subc}': {db[c][subc]}")
                 else:
-                    print(f"-c '{c}' -k '{subc}'")
+                    print(f"-k '{subc}'")
 
 def read_char(text, nb_char, ofd):
     for c in text:
