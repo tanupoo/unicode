@@ -7,6 +7,16 @@ A kichen knife tool for unicode.  The features are below for example.
 - Display charactors of unicode specified.
 - Showing categories and charactors.
 
+```
+% unicode.py show -nN 'SMILING FACE WITH OPEN MOUTH' | unicode.py read -l
+No.  Chr    EAA SZ CP   Name
+==== ====== === == ==== ==========
+  1: [😃 ] W   2: 0001F603 SMILING FACE WITH OPEN MOUTH
+  2: [😄 ] W   2: 0001F604 SMILING FACE WITH OPEN MOUTH AND SMILING EYES
+  3: [😅 ] W   2: 0001F605 SMILING FACE WITH OPEN MOUTH AND COLD SWEAT
+  4: [😆 ] W   2: 0001F606 SMILING FACE WITH OPEN MOUTH AND TIGHTLY-CLOSED EYES
+```
+
 ## Reading String
 
 It decodes the input string into Unicode and to show the encoded string.
@@ -69,7 +79,7 @@ optional arguments:
                         'NFKC', 'NFD', 'NFKD']
 ```
 
-## Displaying Charactors from Unicode Code Points.
+## Displaying Charactors from Unicode Code Points, or Unicode name.
 
 Examples.
 
@@ -99,7 +109,7 @@ you can see the characors of a range of two code points.
 ぁあぃいぅうぇえぉおかがきぎく
 ```
 
-If you want to specify the code poings in integer,
+If you want to specify the code points in integer,
 you can use the -i option.
 So, below commands result same output.
 
@@ -108,10 +118,11 @@ So, below commands result same output.
 ぁあぃいぅうぇえぉおかがきぎく
 ```
 
-More examples.
+You can see the charactors from a part of or full Unicode name.
 
 ```
-unicode.py show -N 1F64b 1f3fb
+% unicode.py show -n 'SMILING FACE WITH OPEN MOUTH'  
+😃😄😅😆
 ```
 
 Usage.
