@@ -140,7 +140,7 @@ def read_char(text, nb_char, ofd):
         nb_char += 1
         w_area = unicodedata.east_asian_width(c)
         width = wdb[opt.eaa_mode].get(w_area)
-        ucode = ord(c).to_bytes(2, "big").hex().upper()
+        ucode = ord(c).to_bytes(4, "big").hex().upper()
         name = unicodedata.name(c, None)
         # this trick is for conversion the \u representation.
         if c in ["\n", "\r", "\t"]:
