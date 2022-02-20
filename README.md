@@ -214,7 +214,16 @@ Emoticons 1F600-1F64F 80
    2 😼 😽 😾 😿 🙀 🙁 🙂 🙃 🙄 🙅 🙆 🙇 🙈 🙉 🙊 🙋 🙌 🙍 🙎 🙏
 ```
 
-More examples.
+Below command, you can see all Emoji and Pictgraphs.
+
+```
+unicode.py l -c 'Emoji & Pictographs' -a
+```
+
+You may see many `𐓄 ` marks.
+That means your terminal doesn't support the symbols.
+
+Moer examples.
 
 ```
 unicode.py list -c scripts -a
