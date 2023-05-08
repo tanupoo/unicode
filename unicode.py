@@ -14,52 +14,6 @@ wdb = {
     False: { "F": None, "H": None, "W": None, "Na": 1, "A": 1, "N": 1 }
 }
 
-def find_category(category_hint):
-    """find categories by category_hint, which is a whole or a part of a key."""
-    ret = []
-    hint = category_hint.lower()
-    for c,x in db.items():
-        if c.lower().find(hint) > -1:
-            ret.append(c)
-    if len(ret) == 0:
-        raise ValueError("ERROR: not found any category containing "
-                         f"the string '{keyword}'")
-    return ret
-
-def find_subc(whole_key=None, keyword=None, category=None):
-    """
-    find sub categories by an entire key or a keyword (a part of a key).
-    return the list of (subcategory name, the range of code points).
-    either whole_key or keyword, but not both, must be specified.
-    XXX need to be cleaned up.
-    """
-    if not (bool(whole_key) ^ bool(keyword)):
-        raise ValueError("ERROR: either key or keyword must be specified.")
-    cp_list = []
-    if keyword is not None:
-        # i.e. whole_key is None
-        keyword = keyword.lower()
-        if category:
-            for k,v in db[category].items():
-                if k.lower().find(keyword) > -1:
-                    cp_list.append((k,v))
-        else:
-            # try to search with whole items in db.
-            for c,x in db.items():
-                for k,v in x.items():
-                    if k.lower().find(keyword) > -1:
-                        cp_list.append((k,v))
-        #
-        if opt.strict_search == True:
-            if len(cp_list) == 0:
-                raise ValueError("ERROR: not found any chars coresponding "
-                                 f"to the key '{keyword}' "
-                                 f"in category '{category}'")
-        return cp_list
-    else:
-        # i.e. whole_key is not None
-        return [db[category][subcategory]]
-
 def print_chars(subc, cr, opt):
     """Need to improve to show charactors using the width of each charactor.
     subc: name of the sub category.
@@ -95,45 +49,102 @@ def print_chars(subc, cr, opt):
 #
 # functions
 #
+def find_subc(keyword_hint=None, category_hint=None):
+    """
+    get a list of code points corresponding to the specified keyword_hint and/or
+    the category_hint.  The hint could be an entire name, or a part of the name,
+    or the index number of the database which is showed the list command.
+    return the list of (category, subcategory, the range of code points).
+    """
+    def _get_cp_by_category_hint(hint):
+        """return code points"""
+        try:
+            # check if the hint is a number.
+            num = int(category_hint)
+        except Exception as e:
+            # the hint must be a name.
+            categories = []
+            hint = category_hint.lower()
+            for c,x in db.items():
+                if c.lower().find(hint) > -1:
+                    categories.append(c)
+            """
+            if len(categories) == 0:
+                raise ValueError("ERROR: not found any category containing "
+                                f"the string '{category_hint}'")
+            """
+            ret = {}
+            for c in categories:
+                ret.update({c: db[c]})
+            return ret
+        else:
+            x = list(db.items())[num]
+            return {x[0]: x[1]}
+    #
+    if keyword_hint is None and category_hint is None:
+        raise ValueError("ERROR: either keyword_hint or category_hint, "
+                         "or both hints must be specified.")
+    if keyword_hint and category_hint:
+        cp_list_base = _get_cp_by_category_hint(category_hint)
+        try:
+            # check if the hint is a number.
+            num = int(keyword_hint)
+        except Exception as e:
+            # the hint must be a name.
+            cp_list = {}
+            keyword_hint = keyword_hint.lower()
+            for c,x in cp_list_base.items():
+                cpx = cp_list.setdefault(c, {})
+                for subc,cp_range in x.items():
+                    if subc.lower().find(keyword_hint) > -1:
+                        cpx.update({subc:cp_range})
+            return cp_list
+        else:
+            offset = 0
+            for i,(c,x) in enumerate(cp_list_base.items()):
+                for j,(subc,cp_range) in enumerate(x.items()):
+                    if num == offset+j:
+                        return {c: {subc: cp_range}}
+                offset += len(x)
+            return {}
+    elif keyword_hint:
+        # but, not category_hint.
+        pass
+    elif category_hint:
+        return _get_cp_by_category_hint(category_hint)
+
 def func_list(opt):
     """
-    if neither category nor keyword is specified, just print all categories.
+    it shows a list of the unicoe charactors by a range of the code points
+    defined by the combination of the -c option and the -k option.
+    if the combination doesn't unique a single subcategory, it shows
+    a list of subcategories with the indices.
+    but, with the -a option (show_all_chars), it shows entire charactors.
     """
-    if opt.category_hint is None and opt.show_all_chars:
-        raise ValueError("ERROR: the option -c must be defined when you use"
-                         "the -a option")
-    # print all categories.
-    if opt.category_hint is None and opt.keyword is None:
-        for category,x in db.items():
-            print(f"-c '{category}'")
+    if opt.category_hint is None and opt.keyword_hint is None:
+        # show a list of entire categories.
+        for i,category in enumerate(db.keys()):
+            print(f"{i}: {category}")
         return
     #
-    #
-    if opt.keyword: # i.e. -k option, or plus -c option.
-        cp_list = []
-        if opt.category_hint:
-            for c in find_category(opt.category_hint):
-                cp_list.extend(find_subc(keyword=opt.keyword, category=c))
-        else:
-            cp_list.extend(find_subc(keyword=opt.keyword))
-        for subc,cp_range in cp_list:
-            print_chars(subc, cp_range, opt)
-    elif opt.category_hint: # i.e. only -c option.
-        xcp_list = []
-        for c in find_category(opt.category_hint):
-            for k,v in db[c].items():
-                xcp_list.append((c,k,v))
-        if opt.show_all_chars:
-            for c,subc,cp_range in xcp_list:
+    cp_list = find_subc(keyword_hint=opt.keyword_hint, category_hint=opt.category_hint)
+    if opt.show_all_chars or (len(cp_list.keys()) == 1 and
+                              len(cp_list[list(cp_list.keys())[0]]) == 1):
+        # show entire charactors.
+        for c,x in cp_list.items():
+            for subc,cp_range in x.items():
                 print_chars(subc, cp_range, opt)
-        else:
-            # showing the list of sub categories.
-            for c,subc,cp_range in xcp_list:
+    else:
+        # show a list of sub categories spcified by the hint.
+        offset = 0
+        for i,(c,x) in enumerate(cp_list.items()):
+            print(f"## {c}")
+            for j,(subc,cp_range) in enumerate(x.items()):
                 if opt.show_cp:
-                    #print(f"-c '{c}' -k '{subc}': {db[c][subc]}")
-                    print(f"-k '{subc}': {db[c][subc]}")
+                    print(f"{offset+j}: '{subc}': {cp_range}")
                 else:
-                    print(f"-k '{subc}'")
+                    print(f"{offset+j}: '{subc}'")
+            offset += len(x)
 
 def read_char(text, nb_char, ofd):
     for c in text:
@@ -234,15 +245,17 @@ subp = ap.add_subparsers(dest="parser_name", help="sub-command help")
 sap0 = subp.add_parser("list", aliases=["l"],
                        help="shows the list of the categories and charactors.")
 sap0.add_argument("-c", action="store", dest="category_hint",
-                  help="specify a category or a part of category name.")
+                  help="specify a unicode category, "
+                    "which is case-insensitive, can be a part of the name, "
+                  "can be a number in the list.")
 sap0.add_argument("-a", action="store_true", dest="show_all_chars",
                   help="show all chars under the category specified.")
 sap0.add_argument("--show-code-point", action="store_true", dest="show_cp",
                   help="show the range of code point.")
-sap0.add_argument("-k", action="store", dest="keyword",
-                  help="specify a keyword of the unicode sub category name.")
-sap0.add_argument("--strict", action="store_true", dest="strict_search",
-                  help="specify to search strictly.")
+sap0.add_argument("-k", action="store", dest="keyword_hint",
+                  help="specify a unicode sub category name, "
+                    "which is case-insensitive, can be a part of the name, "
+                  "can be a number in the list.")
 sap0.add_argument("--columns", action="store", dest="nb_columns",
                   type=int, default=20,
                   help="specify the number of the columns to show.")
