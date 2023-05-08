@@ -80,6 +80,18 @@ def find_subc(keyword_hint=None, category_hint=None):
         else:
             x = list(db.items())[num]
             return {x[0]: x[1]}
+    def _get_cp_by_keyword_name(hint, cp_list_base):
+        ret = {}
+        hint = hint.lower()
+        for c,x in cp_list_base.items():
+            cpx = ret.setdefault(c, {})
+            for subc,cp_range in x.items():
+                if subc.lower().find(keyword_hint) > -1:
+                    cpx.update({subc:cp_range})
+            if len(cpx) == 0:
+                # remove the category if no subcategory matched was found.
+                ret.pop(c)
+        return ret
     #
     if keyword_hint is None and category_hint is None:
         raise ValueError("ERROR: either keyword_hint or category_hint, "
@@ -91,14 +103,7 @@ def find_subc(keyword_hint=None, category_hint=None):
             num = int(keyword_hint)
         except Exception as e:
             # the hint must be a name.
-            cp_list = {}
-            keyword_hint = keyword_hint.lower()
-            for c,x in cp_list_base.items():
-                cpx = cp_list.setdefault(c, {})
-                for subc,cp_range in x.items():
-                    if subc.lower().find(keyword_hint) > -1:
-                        cpx.update({subc:cp_range})
-            return cp_list
+            return _get_cp_by_keyword_name(keyword_hint, cp_list_base)
         else:
             offset = 0
             for i,(c,x) in enumerate(cp_list_base.items()):
@@ -109,7 +114,14 @@ def find_subc(keyword_hint=None, category_hint=None):
             return {}
     elif keyword_hint:
         # but, not category_hint.
-        pass
+        try:
+            # check if the hint is a number.
+            num = int(keyword_hint)
+        except Exception as e:
+            return _get_cp_by_keyword_name(keyword_hint, db)
+        else:
+            raise ValueError("ERROR: the keyword_hint must be a name, "
+                             "not a number when you don't use the -c option.")
     elif category_hint:
         return _get_cp_by_category_hint(category_hint)
 
@@ -140,7 +152,7 @@ def func_list(opt):
         for i,(c,x) in enumerate(cp_list.items()):
             print(f"## {c}")
             for j,(subc,cp_range) in enumerate(x.items()):
-                if opt.show_cp:
+                if opt.show_cp_range:
                     print(f"{offset+j}: '{subc}': {cp_range}")
                 else:
                     print(f"{offset+j}: '{subc}'")
@@ -250,8 +262,9 @@ sap0.add_argument("-c", action="store", dest="category_hint",
                   "can be a number in the list.")
 sap0.add_argument("-a", action="store_true", dest="show_all_chars",
                   help="show all chars under the category specified.")
-sap0.add_argument("--show-code-point", action="store_true", dest="show_cp",
-                  help="show the range of code point.")
+sap0.add_argument("-r", action="store_true", dest="show_cp_range",
+                  help="show the range of code point.  It is not valid "
+                  "when the hint unique a subategory or the -a option is used.")
 sap0.add_argument("-k", action="store", dest="keyword_hint",
                   help="specify a unicode sub category name, "
                     "which is case-insensitive, can be a part of the name, "
