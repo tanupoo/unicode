@@ -41,6 +41,7 @@ If you want to see a decomposed string, you can use the -n NFD option.
 With the -l option, you can see the charactors in detail.
 
 ```
+cat sample/hoge.nfd.txt | unicode read -n NFD -l
 No.  Chr    EAA SZ CP   Name
 ==== ====== === == ==== ==========
   1: [ほ ] W   2: 307B HIRAGANA LETTER HO
@@ -148,54 +149,64 @@ optional arguments:
 ## Listing Unicode Charactors.
 
 You can see the charactors in a category you specified.
-Firstly, you can see a list of categories in the 1st level.
+Below command, you can see a list of categories in the 1st level.
 
 ```
 % unicode.py list
--c 'European Scripts'
--c 'Modifier Letters'
--c 'Combining Marks'
--c 'African Scripts'
--c 'Middle Eastern Scripts'
--c 'Central Asian Scripts'
--c 'South Asian Scripts'
--c 'Southeast Asian Scripts'
--c 'Indonesia & Oceania Scripts'
--c 'East Asian Scripts'
--c 'American Scripts'
--c 'Other'
--c 'Notational Systems'
--c 'Punctuation'
--c 'Alphanumeric Symbols'
--c 'Technical Symbols'
--c 'Numbers & Digits'
--c 'Mathematical Symbols'
--c 'Emoji & Pictographs'
--c 'Other Symbols'
--c 'Specials'
--c 'Private Use'
--c 'Surrogates'
--c 'Noncharacters in Charts'
+0: European Scripts
+1: Modifier Letters
+2: Combining Marks
+3: African Scripts
+4: Middle Eastern Scripts
+5: Central Asian Scripts
+6: South Asian Scripts
+7: Southeast Asian Scripts
+8: Indonesia & Oceania Scripts
+9: East Asian Scripts
+10: American Scripts
+11: Other
+12: Notational Systems
+13: Punctuation
+14: Alphanumeric Symbols
+15: Technical Symbols
+16: Numbers & Digits
+17: Mathematical Symbols
+18: Emoji & Pictographs
+19: Other Symbols
+20: Specials
+21: Private Use
+22: Surrogates
+23: Noncharacters in Charts
 ```
 
-You can pick one of them.  Let's see Emoji and Pictographs.
+You can pick one of them to see.  Let's see Emoji and Pictographs.
+With the -c option, you can see a list of subcategories under the category.
 
 ```
 % unicode.py list -c 'Emoji & Pictographs'
--c 'Emoji & Pictographs' -k 'Dingbats'
--c 'Emoji & Pictographs' -k 'Ornamental Dingbats'
--c 'Emoji & Pictographs' -k 'Emoticons'
--c 'Emoji & Pictographs' -k 'Miscellaneous Symbols'
--c 'Emoji & Pictographs' -k 'Miscellaneous Symbols And Pictographs'
--c 'Emoji & Pictographs' -k 'Supplemental Symbols and Pictographs'
--c 'Emoji & Pictographs' -k 'Symbols and Pictographs Extended-A'
--c 'Emoji & Pictographs' -k 'Transport and Map Symbols'
+## Emoji & Pictographs
+0: 'Dingbats'
+1: 'Ornamental Dingbats'
+2: 'Emoticons'
+3: 'Miscellaneous Symbols'
+4: 'Miscellaneous Symbols And Pictographs'
+5: 'Supplemental Symbols and Pictographs'
+6: 'Symbols and Pictographs Extended-A'
+7: 'Transport and Map Symbols'
+```
+
+You can specify a case insensitive part of the name, or the number of the index.
+Below two commands result same output.
+
+```
+% unicode.py list -c emoji
+% unicode.py list -c 18
 ```
 
 Now, you can see a list of the charactores in 'Emoticons'
 
 ```
-% unicode.py list -c 'Emoji & Pictographs' -k 'Emoticons'
+% unicode.py list -c 'Emoji & Pictographs' -k Emoticons
 Emoticons 1F600-1F64F 80
       0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
    0 😔 😕 😖 😗 😘 😙 😚 😛 😜 😝 😞 😟 😠 😡 😢 😣 😤 😥 😦 😧
@@ -203,7 +214,15 @@ Emoticons 1F600-1F64F 80
    2 😼 😽 😾 😿 🙀 🙁 🙂 🙃 🙄 🙅 🙆 🙇 🙈 🙉 🙊 🙋 🙌 🙍 🙎 🙏
 ```
 
-Or, just specify a part of 'Emoticons' like below.
+You can use the -k option as same as the -c option.
+So, below two commands result same output.
+
+```
+% unicode list -c emoji -k 2
+% unicode list -c 18 -k emoti
+```
+
+Or, you can just specify 'emoti' as it can search with the entire db.
 
 ```
 % unicode.py list -k emoti
@@ -214,37 +233,32 @@ Emoticons 1F600-1F64F 80
    2 😼 😽 😾 😿 🙀 🙁 🙂 🙃 🙄 🙅 🙆 🙇 🙈 🙉 🙊 🙋 🙌 🙍 🙎 🙏
 ```
 
-Below command, you can see all Emoji and Pictgraphs.
+With the -a option, you can see the entire charactors under the Emoji and Pictgraphs.
 
 ```
-unicode.py l -c 'Emoji & Pictographs' -a
+unicode.py l -c emoji -a
 ```
 
-You may see many `𐓄 ` marks.
-That means your terminal doesn't support the symbols.
-
-Moer examples.
-
-```
-unicode.py list -c scripts -a
-unicode.py list -c scripts -k rokee
-unicode.py list -c 'East Asian Scripts' -k 'CJK Extension C'
-```
+You may see many squares.  That means your terminal doesn't support the symbols.
 
 Usage.
 
 ```
 % unicode.py list -h
-usage: unicode.py list [-h] [-c CATEGORY_HINT] [-a] [--show-code-point]
-                       [-k KEYWORD] [--strict] [--columns NB_COLUMNS]
+usage: unicode list [-h] [-c CATEGORY_HINT] [-a] [-r] [-k KEYWORD_HINT]
+                    [--columns NB_COLUMNS]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -c CATEGORY_HINT      specify a category or a part of category name.
+  -c CATEGORY_HINT      specify a unicode category, which is case-insensitive,
+                        can be a part of the name, can be a number in the
+                        list.
   -a                    show all chars under the category specified.
-  --show-code-point     show the range of code point.
-  -k KEYWORD            specify a keyword of the unicode sub category name.
-  --strict              specify to search strictly.
+  -r                    show the range of code point. It is not valid when the
+                        hint unique a subategory or the -a option is used.
+  -k KEYWORD_HINT       specify a unicode sub category name, which is case-
+                        insensitive, can be a part of the name, can be a
+                        number in the list.
   --columns NB_COLUMNS  specify the number of the columns to show.
 ```
 
